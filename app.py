@@ -1,21 +1,25 @@
 #!/usr/bin/env python
 # Copyright (c) 2018 Usharerose. All rights reserved.
 # -*- coding: utf-8 -*-
-from flask import Flask
+from flask import Flask, make_response, render_template
+from flask_script import Manager
 
 
 app = Flask(__name__)
+manager = Manager(app)
 
 
 @app.route('/')
 def index():
-    return '<h1>Hello World!</h1>'
+    response = make_response(render_template('index.html'))
+    response.set_cookie('answer', '42')
+    return response
 
 
 @app.route('/user/<name>')
 def user(name):
-    return '<h1>Hello, {}!</h1>'.format(name)
+    return render_template('user.html', name=name)
 
 
 if __name__ == '__main__':
-    app.run(host='localhost', port=5000, debug=True)
+    manager.run()
