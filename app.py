@@ -12,8 +12,11 @@ from flask_sqlalchemy import SQLAlchemy
 from wtforms import StringField, SubmitField
 from wtforms.validators import DataRequired
 
+from models import session as db_session
+from models import User, Role
 
-DATABASE_URI = 'mysql://appannie:appannie@localhost/blog'
+
+DATABASE_URI = 'mysql://appannie:appannie@localhost:3306/blog'
 
 
 app = Flask(__name__)
@@ -35,37 +38,26 @@ class NameForm(Form):
     submit = SubmitField('Submit')
 
 
-class Role(db.Model):
-    __tablename__ = 'roles'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), unique=True)
-    users = db.releationship('User', backref='role')
-
-    def __repr__(self):
-        return '<Role {}>'.format(self.name)
-
-
-class User(db.Model):
-    __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(64), unique=True, index=True)
-    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
-
-    def __repr__(self):
-        return '<User {}>'.format(self.username)
-
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = NameForm()
     if form.validate_on_submit():
+        user = db_session.query(User).filter_by(username=form.name.data).first()
+        if user is None:
+            user = User(username=form.name.data)
+            db_session.add(user)
+            db_session.commit()
+            session['known'] = False
+        else:
+            session['known'] = True
         old_name = session.get('name')
         if old_name is not None and old_name != form.name.data:
             flash('Looks like you have changed your name!')
         session['name'] = form.name.data
         return redirect(url_for('index'))
     response = make_response(render_template('index.html',
-                                             current_time=datetime.utcnow(), form=form, name=session.get('name')))
+                                             current_time=datetime.utcnow(), form=form, name=session.get('name'),
+                                             known=session.get('known', False)))
     response.set_cookie('answer', '42')
     return response
 
